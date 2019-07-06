@@ -83,8 +83,15 @@ mongoClient.connect(url, {useNewUrlParser: true}, function(err, client) {
                // Insert Data
                db.collection('users')
                   .insertOne({_id:_id, _password:_password, _salt: _salt, account:{_id:_id, name:name, email:email, token:token}}, function(error, res) {
-                     response.json({result: "OK", data: "Registration Success"});
-                     console.log('Registration Success');
+                     if (!error){
+                        db.collection('contacts')
+                           .insertOne({account:{_id:_id, name:name, email:email, token:token}, contacts:[]}, function(error, res){
+                              if(!error){
+                                 response.json({result: "OK", data: "Registration Success"});
+                                 console.log('Registration Success');
+                              }
+                           })
+                     }
                });
             }            
          });
@@ -104,22 +111,22 @@ mongoClient.connect(url, {useNewUrlParser: true}, function(err, client) {
                if(user == null){
                   response.json({result:"FAIL", data:'WRONG_ID'});
                   console.log('Wrong ID');
-               }
-               var salt = user._salt;
-               var hashedPassword = checkHashPassword(rawPassword, salt).passwordHash;
-               var rhs = user._password;
-               request.session.account = user.account
-               if(hashedPassword==rhs) {
-                  request.session.account = user.account;
-                  response.json({result:"OK", data:"Login Success"});
-                  console.log('Login Success');
                } else {
-                  response.json({result:"FAIL", data:'WRONG_PASSWORD'});
-                  console.log('Wrong Password');
+                  var salt = user._salt;
+                  var hashedPassword = checkHashPassword(rawPassword, salt).passwordHash;
+                  var rhs = user._password;
+                  if(hashedPassword==rhs) {
+                     request.session.account = user.account;
+                     response.json({result:"OK", data:"Login Success"});
+                     console.log('Login Success');
+                  } else {
+                     response.json({result:"FAIL", data:'WRONG_PASSWORD'});
+                     console.log('Wrong Password');
+                  }
                }
             })
       });
-      
+   
       app.use((req,res,next)=>{
          if (req.session.account == null){
             res.json({result:"FAIL", data:"UNKNOWN_ACCESS"})
@@ -127,8 +134,7 @@ mongoClient.connect(url, {useNewUrlParser: true}, function(err, client) {
          else{
             next();
          }
-      })
-
+      });
       app.post('/crud/*', (req,res,next)=>{
          console.log('enter crud');
          require('./router/crud.js')(app, client);
@@ -136,8 +142,8 @@ mongoClient.connect(url, {useNewUrlParser: true}, function(err, client) {
          next();
       });
             // Start Web Server
-   }
+
    app.listen(3000, () => {
       console.log('Connected to MongoDB Server , Webservice running on port 3000');
-   })
-});
+   });
+}});

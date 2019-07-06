@@ -20,7 +20,9 @@ module.exports = function(app, mongoclient)
 			queries = requestQuery.queries.values;
 			if (!requestQuery.colName.endsWith("_public")){
 				console.log(queries);
-				queries = queries.slice(0).concat({$and:[req.session.account, queries[0]]});
+				queries = [{$and:[{account:req.session.account}, queries[0]]}].concat(queries.slice(1));
+				console.log(queries);
+				//queries = queries.slice(1).concat({$and:[{account: {_id:myhwang99, _name:daniel}}, queries[0]]});
 			}
 			next();
 		} catch (error){
